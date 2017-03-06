@@ -196,7 +196,7 @@ void startEthernet()
 
 //reads out the status returned by the server and sets the LED's appropriately.
 //the mode is defied by the intended call:
-int readServerStatus(int mode) {
+void readServerStatus(int mode) {
   char lastsign='0';
   boolean readStatus = false;
   while(client.connected()) {
@@ -232,7 +232,7 @@ int readServerStatus(int mode) {
           }
           // close the connection to the server:
           client.stop();
-          return 0;
+          return;
         }
         if(currentLine.startsWith("false", 0)){
           if(debug){Serial.println("");}
@@ -246,7 +246,7 @@ int readServerStatus(int mode) {
           }
           // close the connection to the server:
           client.stop();
-          return 0;
+          return;
         }
       }
       if (inChar != '\r') {// removes /r so we dan test if the header end with two newlines, hacky but works.
@@ -331,7 +331,6 @@ void TriggerServerUpdate(boolean stat) {
 }
 
 void readButtons(){
-  int ret=0;
   if((digitalRead(topen)==LOW)&&(hsopen!=1)){
     //startEthernet();
     setRoom(2);
