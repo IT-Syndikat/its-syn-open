@@ -54,102 +54,6 @@ const int rlight = 6;
 const int topen = 2;
 const int tclose = 3;
 
-// Status LED pins
-
-void setup()
-{
-  
-  pinMode(glight, OUTPUT);      
-  pinMode(rlight, OUTPUT);      
-  
-  // Buttons with pullup resistor
-  pinMode(topen, INPUT);      
-  pinMode(tclose, INPUT);      
-  digitalWrite(topen,HIGH);
-  digitalWrite(tclose,HIGH);
-
-  // Start Serial for debugging on the Serial Monitor
-  if(debug){
-    Serial.begin(9600);
-  }
-  // Start Ethernet on Arduino
-  setEth(-1);
-  setRoom(2); 
-  
-  Timer1.initialize(20000); // 50 mal die Sekunde
-  Timer1.attachInterrupt(setLeds);
-  
-  startEthernet();
-
-  delay(1000);
-  
-  // Get current Status
-  RequestState();
-}
-
-void loop()
-{
-  readButtons();
-  launchUpdate();
-}
-
-
-void readButtons(){
-  int ret=0;
-  if((digitalRead(topen)==LOW)&&(hsopen!=1)){
-    //startEthernet();
-    setRoom(2);
-    TriggerServerUpdate(true);
-  }
-  if((digitalRead(tclose)==LOW)&&(hsopen!=0)){
-    //startEthernet();
-    setRoom(2);
-    TriggerServerUpdate(false);
-  }
-}
-
-void launchUpdate(){
-  if(update==1){
-    RequestPing();
-    RequestState();
-    update = 0;
-  }
-}
-
-void startEthernet()
-{
-  client.stop();
-  if(debug){
-    Serial.println("Connecting Arduino to network...");
-    Serial.println();
-  }
-  setEth(-1);
-  delay(1000);
-  
-  // Connect to network amd obtain an IP address using DHCP
-  if (Ethernet.begin(mac) == 0)
-  {
-    if(debug){
-      Serial.println("DHCP Failed, reset Arduino to try again");
-      Serial.println();
-    }
-    setEth(0);
-  }
-  else
-  {
-    if(debug){
-      Serial.println("Arduino connected to network using DHCP");
-      Serial.println();
-    }
-    setEth(1);
-  }  
-  if(debug){
-    Serial.println("DONE");
-    Serial.println();
-  }
-  delay(1000);
-}
-
 void setLeds(){
   if (pingtimer>=0)
   {
@@ -180,7 +84,7 @@ void setLeds(){
           analogWrite(glight, (255/(ledspan/2)*ledtimer));//fade up
         }else{
           analogWrite(glight, 255-(255/(ledspan/2)*(ledtimer-(ledspan/2))));//fade down
-        }    
+        }
         analogWrite(rlight, 0);
         break;
       }
@@ -201,10 +105,10 @@ void setLeds(){
           case 2:{ // wait
             // fade red and green
             if(ledtimer < (ledspan/2)){
-              int tmp=(255/(ledspan/2)*ledtimer); 
+              int tmp=(255/(ledspan/2)*ledtimer);
               analogWrite(glight, tmp);//fade up
               analogWrite(rlight, tmp);//fade up
-              
+
             }else{
               int tmp = 255-(255/(ledspan/2)*(ledtimer-(ledspan/2)));
               analogWrite(glight, tmp);//fade down
@@ -212,17 +116,17 @@ void setLeds(){
             }
             break;
           }
-          case -1:{ // unknown 
+          case -1:{ // unknown
             // fade red
             if(ledtimer < (ledspan/2)){
               analogWrite(rlight, (255/(ledspan/2)*ledtimer));//fade up
             }else{
               analogWrite(rlight, 255-(255/(ledspan/2)*(ledtimer-(ledspan/2))));//fade down
-            }    
-            analogWrite(glight, 0);      
+            }
+            analogWrite(glight, 0);
             break;
           }
-        }      
+        }
         break;
       }
     }
@@ -235,7 +139,7 @@ void setLeds(){
     if ( checktimer >= checkspan ) {
       checktimer = 0;
       update=1;
-    }  
+    }
 }
 
 void setEth(int statuss){
@@ -256,53 +160,42 @@ void setRoom(int statuss){
   setLeds();
 }
 
-
-void RequestState() {
-  TriggerServerReq("/status-s.php",0);
-}
-
-
-void RequestPing() {
-  TriggerServerReq("/ping-get.php?apikey="+pingAPIKey,1);
-}
-
-void TriggerServerReq(String s, int mode) {
-  // attempt to connect, and wait a millisecond:
-  if(debug){Serial.println("connecting to server... Status req");}
-  if (client.connect(serverName, 80)) {
-    if(debug){Serial.println("making HTTP request...");}
-    // make HTTP GET request to server:
-    client.println("GET "+ s +" HTTP/1.1");
-    client.println("HOST: it-syndikat.org");
-    client.println("Connection: close");
-    client.println();
-    readServerStatus(mode);
-  }else{
-    if(debug){Serial.println("Not connected...");}
+void startEthernet()
+{
+  client.stop();
+  if(debug){
+    Serial.println("Connecting Arduino to network...");
+    Serial.println();
   }
-  // note the time of this connect attempt:
-}
+  setEth(-1);
+  delay(1000);
 
-void TriggerServerUpdate(boolean stat) {
-  // attempt to connect, and wait a millisecond:
-  if(debug){Serial.println("connecting to server... Update Req");}
-  if (client.connect(serverName, 80)) {
-    if(debug){Serial.println("making HTTP request...");}
-    // make HTTP GET request to server:
-    String s =(stat?"true":"false");
-    client.println("GET /update.php?open=" + s + "&apikey="+serverAPIKey+" HTTP/1.1");
-    client.println("HOST: it-syndikat.org");
-    client.println("Connection: close");
-    client.println();
-    readServerStatus(0);    
-  }else{
-    if(debug){Serial.println("Not connected...");}
+  // Connect to network amd obtain an IP address using DHCP
+  if (Ethernet.begin(mac) == 0)
+  {
+    if(debug){
+      Serial.println("DHCP Failed, reset Arduino to try again");
+      Serial.println();
+    }
+    setEth(0);
   }
-  // note the time of this connect attempt:
+  else
+  {
+    if(debug){
+      Serial.println("Arduino connected to network using DHCP");
+      Serial.println();
+    }
+    setEth(1);
+  }
+  if(debug){
+    Serial.println("DONE");
+    Serial.println();
+  }
+  delay(1000);
 }
 
 //reads out the status returned by the server and sets the LED's appropriately.
-//the mode is defied by the intended call: 
+//the mode is defied by the intended call:
 int readServerStatus(int mode) {
   char lastsign='0';
   boolean readStatus = false;
@@ -313,7 +206,7 @@ int readServerStatus(int mode) {
 
       // add incoming byte to end of line:
       currentLine += inChar;
-      
+
       if(debug){Serial.print(inChar);}
 
       // if you get a newline, clear the line:
@@ -324,7 +217,7 @@ int readServerStatus(int mode) {
           if(debug){Serial.println("##END OF HEADER##");}
         }
       }
-      
+
       if (readStatus) {
         if(currentLine.startsWith("true", 0)){
           if(debug){Serial.println("");}
@@ -354,21 +247,124 @@ int readServerStatus(int mode) {
           // close the connection to the server:
           client.stop();
           return 0;
-        }                
+        }
       }
       if (inChar != '\r') {// removes /r so we dan test if the header end with two newlines, hacky but works.
         lastsign = inChar;
-      }      
+      }
     }
   }
   setRoom(-1);
   client.stop();
 }
 
+void TriggerServerReq(String s, int mode) {
+  // attempt to connect, and wait a millisecond:
+  if(debug){Serial.println("connecting to server... Status req");}
+  if (client.connect(serverName, 80)) {
+    if(debug){Serial.println("making HTTP request...");}
+    // make HTTP GET request to server:
+    client.println("GET "+ s +" HTTP/1.1");
+    client.println("HOST: it-syndikat.org");
+    client.println("Connection: close");
+    client.println();
+    readServerStatus(mode);
+  }else{
+    if(debug){Serial.println("Not connected...");}
+  }
+  // note the time of this connect attempt:
+}
+
+void RequestState() {
+  TriggerServerReq("/status-s.php",0);
+}
+
+// Status LED pins
+
+void setup()
+{
+
+  pinMode(glight, OUTPUT);
+  pinMode(rlight, OUTPUT);
+
+  // Buttons with pullup resistor
+  pinMode(topen, INPUT);
+  pinMode(tclose, INPUT);
+  digitalWrite(topen,HIGH);
+  digitalWrite(tclose,HIGH);
+
+  // Start Serial for debugging on the Serial Monitor
+  if(debug){
+    Serial.begin(9600);
+  }
+  // Start Ethernet on Arduino
+  setEth(-1);
+  setRoom(2);
+
+  Timer1.initialize(20000); // 50 mal die Sekunde
+  Timer1.attachInterrupt(setLeds);
+
+  startEthernet();
+
+  delay(1000);
+
+  // Get current Status
+  RequestState();
+}
+
+void TriggerServerUpdate(boolean stat) {
+  // attempt to connect, and wait a millisecond:
+  if(debug){Serial.println("connecting to server... Update Req");}
+  if (client.connect(serverName, 80)) {
+    if(debug){Serial.println("making HTTP request...");}
+    // make HTTP GET request to server:
+    String s =(stat?"true":"false");
+    client.println("GET /update.php?open=" + s + "&apikey="+serverAPIKey+" HTTP/1.1");
+    client.println("HOST: it-syndikat.org");
+    client.println("Connection: close");
+    client.println();
+    readServerStatus(0);
+  }else{
+    if(debug){Serial.println("Not connected...");}
+  }
+  // note the time of this connect attempt:
+}
+
+void readButtons(){
+  int ret=0;
+  if((digitalRead(topen)==LOW)&&(hsopen!=1)){
+    //startEthernet();
+    setRoom(2);
+    TriggerServerUpdate(true);
+  }
+  if((digitalRead(tclose)==LOW)&&(hsopen!=0)){
+    //startEthernet();
+    setRoom(2);
+    TriggerServerUpdate(false);
+  }
+}
+
+void RequestPing() {
+  TriggerServerReq("/ping-get.php?apikey="+pingAPIKey,1);
+}
+
+void launchUpdate(){
+  if(update==1){
+    RequestPing();
+    RequestState();
+    update = 0;
+  }
+}
+
+void loop()
+{
+  readButtons();
+  launchUpdate();
+}
 
 //This just reads the server return and logs it to the serial
 // @deprecated
-void readServerReturn() {  
+void readServerReturn() {
   //if(debug){Serial.println("readServerReturn ... ");}
    while(client.connected()) {
      if (client.available()) {
@@ -380,4 +376,3 @@ void readServerReturn() {
    if(debug){Serial.println("disconnecting.");}
    client.stop();
 }
-
